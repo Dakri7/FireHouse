@@ -15,7 +15,7 @@ const int valveDuration = 10000;
 
 void setup() {
   for(int i = 0; i < WINDOW_COUNT; i++){
-    pinMode(floaterPins[i], INPUT);
+    pinMode(floaterPins[i], INPUT_PULLUP);
     pinMode(lightPins[i], OUTPUT);
     pinMode(valvePins[i], OUTPUT);
 
@@ -32,7 +32,8 @@ void setup() {
 void loop() {
   for(int i = 0; i < WINDOW_COUNT; i++){
     //Update window states
-    if(digitalRead(floaterPins[i]) == HIGH){
+    //Note that low is a closed switch because the gate is hooked up to a pullup circuit
+    if(digitalRead(floaterPins[i]) == LOW){
       windowState[i] = EMPTYING;
     }
 
