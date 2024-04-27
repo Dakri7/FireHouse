@@ -16,17 +16,20 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// ===================== CONFIGURATION =======================================
 #define WINDOW_COUNT 4
-#define BURNING 0
-#define EXTINGUISHED 1
 
-//TODO Pin layout
 const int floaterPins[WINDOW_COUNT] = {};
 const int lightPins[WINDOW_COUNT] = {};
 const int valvePins[WINDOW_COUNT] = {};
 const int finishedPin = NULL;
+const int hardModePin = NULL;
 
-int windowState[WINDOW_COUNT] = {};
+const int minReigniteDelay = 15000;
+const int maxReigniteDelay = 20000;
+// ===========================================================================
+
+long windowState[WINDOW_COUNT] = {};
 bool allExtinguished;
 
 void setup() {
@@ -36,39 +39,42 @@ void setup() {
     pinMode(valvePins[i], OUTPUT);
 
     digitalWrite(lightPins[i], HIGH);
-    //TODO check whether HIGH is open or closed
-    digitalWrite(valvePins[i], HIGH);
+    digitalWrite(valvePins[i], LOW);
 
-    windowState[i] = BURNING;
+    windowState[i] = 0;
   }
-
+  pinMode(hardModePin, INPUT_PULLUP);
+  pinMode(finishedPin, OUTPUT);
+  digitalWrite(finishedPin, LOW);
   allExtinguished = false;
 }
 
 void loop() {
-  allExtinguished = true;
-  for(int i = 0; i < WINDOW_COUNT; i++){
-    //Update window states
-    //Note that low is a closed switch because the gate is hooked up to a pullup circuit
-    if(digitalRead(floaterPins[i]) == LOW){
-      windowState[i] = EXTINGUISHED;
-    }
-
-    allExtinguished = allExtinguished && windowState[i] == EXTINGUISHED;
-
-    //Set pins according to window state
-    if(windowState[i] == BURNING){
-      digitalWrite(lightPins[i], HIGH);
-      //TODO check whether HIGH is open or closed
-      digitalWrite(valvePins[i], HIGH);
-    } else if(windowState[i] == EXTINGUISHED){
-      digitalWrite(lightPins[i], LOW);
-      //TODO check whether HIGH is open or closed
-      digitalWrite(valvePins[i], LOW);
-    }
-  }
-
   if(allExtinguished){
     digitalWrite(finishedPin, HIGH);
+  } else {
+    allExtinguished = true;
+    
+    //Set current time to 0 for easy mode, so valves never close again
+    long currTime = digitalRead(hardModePin) == LOW ? millis(): 0;
+    
+    for(int i = 0; i < WINDOW_COUNT; i++){
+      //Update window states
+      //Note that low is a closed switch because the gate is hooked up to a pullup circuit
+      if(digitalRead(floaterPins[i]) == LOW){
+        windowState[i] = currTime + random(minReigniteDelay, maxReigniteDelay);
+      }
+
+      allExtinguished = allExtinguished && windowState[i] > currTime;
+
+      //Set pins according to window state
+      if(windowState[i] <= currTime){         //BURNING
+        digitalWrite(lightPins[i], HIGH);
+        digitalWrite(valvePins[i], LOW);
+      } else if(windowState[i] > currTime){   //EXTINGUISHED
+        digitalWrite(lightPins[i], LOW);
+        digitalWrite(valvePins[i], HIGH);
+      }
+    }
   }
 }
