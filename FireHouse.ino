@@ -24,12 +24,15 @@ const int lightPins[WINDOW_COUNT] = {};
 const int valvePins[WINDOW_COUNT] = {};
 const int finishedPin = NULL;
 const int hardModePin = NULL;
+const int pumpPin = NULL;
 
 const int minReigniteDelay = 15000;
 const int maxReigniteDelay = 20000;
+const int pumpDuration = 1000 * 60 * 5;
 // ===========================================================================
 
 long windowState[WINDOW_COUNT] = {};
+long pumpOffTime = 0;
 bool allExtinguished;
 
 void setup() {
@@ -45,15 +48,25 @@ void setup() {
   }
   pinMode(hardModePin, INPUT_PULLUP);
   pinMode(finishedPin, OUTPUT);
+  pinMode(pumpPin, OUTPUT);
   digitalWrite(finishedPin, LOW);
+  digitalWrite(pumpPin, HIGH);
   allExtinguished = false;
 }
 
 void loop() {
   if(allExtinguished){
     digitalWrite(finishedPin, HIGH);
+
+    if(pumpOffTime < millis()){
+      digitalWrite(pumpPin, LOW);
+    } else {
+      digitalWrite(pumpPin, HIGH);
+    }
   } else {
-    allExtinguished = true;
+    allExtinguished = true;   // This is set to fgalse later if the game is not finished
+    pumpOffTime = millis() + pumpDuration;  // Pump runs for a duration longer then the game is running
+    digitalWrite(pumpPin, HIGH);
     
     //Set current time to 0 for easy mode, so valves never close again
     long currTime = digitalRead(hardModePin) == LOW ? millis(): 0;
