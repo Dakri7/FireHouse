@@ -1,6 +1,6 @@
 /*
 FireHouse
-Copyright (C) 2024  FF-Hechtsheim
+Copyright (C) 2024 FF-Hechtsheim
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,18 +19,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // ===================== CONFIGURATION =======================================
 #define WINDOW_COUNT 4
 
+//Pin configuration
 const int floaterPins[WINDOW_COUNT] = {};
 const int lightPins[WINDOW_COUNT] = {};
 const int valvePins[WINDOW_COUNT] = {};
 const int finishedPin = NULL;
-const int hardModePin = NULL;
 const int pumpPin = NULL;
+const int normalModeReset = NULL;
+const int hardModeReset = NULL;
 
-const int minReigniteDelay = 15000;
-const int maxReigniteDelay = 20000;
+
+//Hard mode only
+const int minReigniteDelay = 15000; //ms
+const int maxReigniteDelay = 20000; //ms
+
 const int pumpDuration = 1000 * 60 * 5;
 // ===========================================================================
 
+bool hardMode = false;
 long windowState[WINDOW_COUNT] = {};
 long pumpOffTime = 0;
 bool allExtinguished;
@@ -46,7 +52,8 @@ void setup() {
 
     windowState[i] = 0;
   }
-  pinMode(hardModePin, INPUT_PULLUP);
+  pinMode(hardModeReset, INPUT_PULLUP);
+  pinMode(normalModeReset, INPUT_PULLUP);
   pinMode(finishedPin, OUTPUT);
   pinMode(pumpPin, OUTPUT);
   digitalWrite(finishedPin, LOW);
@@ -54,7 +61,21 @@ void setup() {
   allExtinguished = false;
 }
 
+void reset(bool hard){
+  hardMode = hard;
+  for(int i = 0; i < WINDOW_COUNT; i++){
+    windowState[i] = 0;
+  }
+  allExtinguished = false;
+}
+
 void loop() {
+  bool normlRst = digitalRead(normalModeReset) == LOW;
+  bool hardRst = digitalRead(hardModeReset) == LOW;
+  if(normlRst|| hardRst){
+      reset(hardRst);
+      return;
+  }
   if(allExtinguished){
     digitalWrite(finishedPin, HIGH);
 
@@ -64,12 +85,13 @@ void loop() {
       digitalWrite(pumpPin, HIGH);
     }
   } else {
-    allExtinguished = true;   // This is set to fgalse later if the game is not finished
+    digitalWrite(finishedPin, LOW);
+    allExtinguished = true;   // This is set to false later if the game is not finished
     pumpOffTime = millis() + pumpDuration;  // Pump runs for a duration longer then the game is running
     digitalWrite(pumpPin, HIGH);
     
     //Set current time to 0 for easy mode, so valves never close again
-    long currTime = digitalRead(hardModePin) == LOW ? millis(): 0;
+    long currTime = hardMode ? millis(): 0;
     
     for(int i = 0; i < WINDOW_COUNT; i++){
       //Update window states
