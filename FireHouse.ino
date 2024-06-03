@@ -16,29 +16,40 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define RST_NONE 0
+#define RST_WAITING 1
+#define RST_RECOVERING 2
+
+
 // ===================== CONFIGURATION =======================================
+
 #define WINDOW_COUNT 4
 
 //Pin configuration
-const int floaterPins[WINDOW_COUNT] = {};
-const int lightPins[WINDOW_COUNT] = {};
-const int valvePins[WINDOW_COUNT] = {};
-const int finishedPin = NULL;
-const int pumpPin = NULL;
-const int normalModeReset = NULL;
-const int hardModeReset = NULL;
+const int floaterPins[WINDOW_COUNT] = {0, 1, 2, 3};
+const int lightPins[WINDOW_COUNT] = {4, 5, 6, 7};
+const int valvePins[WINDOW_COUNT] = {8, 9, 10, 11};
+const int finishedPin = 12;
+const int pumpPin = 13;
+const int normalModeReset = 14;
+const int hardModeReset = 15;
 
 
 //Hard mode only
-const int minReigniteDelay = 15000; //ms
-const int maxReigniteDelay = 20000; //ms
+const int minReigniteDelay = 1000 * 25; //ms
+const int maxReigniteDelay = 1000 * 30; //ms
 
 const int pumpDuration = 1000 * 60 * 5;
+const int resetDelay = 1000 * 30;
+const int resetCooldown = 1000 * 2;
 // ===========================================================================
 
 bool hardMode = false;
 long windowState[WINDOW_COUNT] = {};
 long pumpOffTime = 0;
+long resetTime = 0;
+int resetStage = RST_NONE;
+bool hardReset = false;
 bool allExtinguished;
 
 void setup() {
@@ -67,15 +78,38 @@ void reset(bool hard){
     windowState[i] = 0;
   }
   allExtinguished = false;
+  resetTime = millis() + 2000;
+  resetStage = RST_RECOVERING;
 }
 
 void loop() {
   bool normlRst = digitalRead(normalModeReset) == LOW;
   bool hardRst = digitalRead(hardModeReset) == LOW;
-  if(normlRst|| hardRst){
-      reset(hardRst);
-      return;
+
+  if(resetStage == RST_NONE && (normlRst || hardRst)){
+    hardReset = hardRst;
+    if(allExtinguished){
+      resetTime = millis();
+    } else {
+      resetTime = millis() + resetDelay;
+
+      for(int i = 0; i < WINDOW_COUNT; i++){
+        windowState[i] = millis() + resetDelay;
+      }
+    }
+    resetStage = RST_WAITING;
   }
+
+  if(resetStage == RST_WAITING && resetTime < millis()){
+    reset(hardReset);
+    return;
+  }
+
+  if(resetStage == RST_RECOVERING && resetTime < millis()){
+    resetStage = RST_NONE;
+    resetTime = 0;
+  }
+
   if(allExtinguished){
     digitalWrite(finishedPin, HIGH);
 
