@@ -58,8 +58,8 @@ void setup() {
     pinMode(lightPins[i], OUTPUT);
     pinMode(valvePins[i], OUTPUT);
 
-    digitalWrite(lightPins[i], HIGH);
-    digitalWrite(valvePins[i], LOW);
+    digitalWrite(lightPins[i], LOW);
+    digitalWrite(valvePins[i], HIGH);
 
     windowState[i] = 0;
   }
@@ -67,8 +67,8 @@ void setup() {
   pinMode(normalModeReset, INPUT_PULLUP);
   pinMode(finishedPin, OUTPUT);
   pinMode(pumpPin, OUTPUT);
-  digitalWrite(finishedPin, LOW);
-  digitalWrite(pumpPin, HIGH);
+  digitalWrite(finishedPin, HIGH);
+  digitalWrite(pumpPin, LOW);
   allExtinguished = false;
 }
 
@@ -111,18 +111,18 @@ void loop() {
   }
 
   if(allExtinguished){
-    digitalWrite(finishedPin, HIGH);
+    digitalWrite(finishedPin, LOW);
 
     if(pumpOffTime < millis()){
-      digitalWrite(pumpPin, LOW);
-    } else {
       digitalWrite(pumpPin, HIGH);
+    } else {
+      digitalWrite(pumpPin, LOW);
     }
   } else {
-    digitalWrite(finishedPin, LOW);
+    digitalWrite(finishedPin, HIGH);
     allExtinguished = true;   // This is set to false later if the game is not finished
     pumpOffTime = millis() + pumpDuration;  // Pump runs for a duration longer then the game is running
-    digitalWrite(pumpPin, HIGH);
+    digitalWrite(pumpPin, LOW);
     
     //Set current time to 0 for easy mode, so valves never close again
     long currTime = hardMode ? millis(): 0;
@@ -138,11 +138,11 @@ void loop() {
 
       //Set pins according to window state
       if(windowState[i] <= currTime){         //BURNING
-        digitalWrite(lightPins[i], HIGH);
-        digitalWrite(valvePins[i], LOW);
-      } else if(windowState[i] > currTime){   //EXTINGUISHED
         digitalWrite(lightPins[i], LOW);
         digitalWrite(valvePins[i], HIGH);
+      } else if(windowState[i] > currTime){   //EXTINGUISHED
+        digitalWrite(lightPins[i], HIGH);
+        digitalWrite(valvePins[i], LOW);
       }
     }
   }
